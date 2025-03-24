@@ -11,8 +11,13 @@ ENV PORT=${PORT:-3000}
 ENV DEPLOY_METHOD=docker
 ENV DEPLOY_PLATFORM=${DEPLOY_PLATFORM:-}
 ENV REG_TOKEN=${REG_TOKEN:-}
-ENV TZ="America/La_Paz" 
-ENV COMPlus_EnableDiagnostics=0
+
+HEALTHCHECK --interval=10s CMD node --es-module-specifier-resolution=node healthcheck.js
+
+# Don’t run as root
+RUN chown -R node /app
+USER node
+#
 
 
 # Expose the Rocket.Chat port 300
