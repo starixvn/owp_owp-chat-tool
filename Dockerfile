@@ -18,11 +18,5 @@ ENV COMPlus_EnableDiagnostics=0
 # Expose the Rocket.Chat port 300
 EXPOSE 3000
 
-# Don’t run as root
-RUN adduser --disabled-password \
-    --home /app \
-    --gecos '' dotnetuser && chown -R dotnetuser /app && chown -R dotnetuser /tmp
-USER dotnetuser
-#
 
 CMD ["node", "main.js"]
