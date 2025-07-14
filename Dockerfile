@@ -74,7 +74,7 @@ WORKDIR /app/bundle
 
 # needs a mongoinstance - defaults to container linking with alias 'db'
 ENV DEPLOY_METHOD=docker-official
-ENV MONGO_URL=mongodb://rkc_owp:WOmpYqsEkRz8wCj4UehPVM3v5cfSNaLt@10.142.34.20:16602,10.142.34.18:16602/rocketchat?replicaSet=rocketchat_rs&authSource=admin
+ENV MONGO_URL=mongodb://rkc_owp:WOmpYqsEkRz8wCj4UehPVM3v5cfSNaLt@10.142.34.20:16601,10.142.34.20:16602,10.142.34.18:16602/rocketchat?replicaSet=rocketchat_rs&authSource=admin
 ENV MAIL_URL=smtp://fakeuser:fakepass@localhost:2525/
 ENV EXIT_UNHANDLEDPROMISEREJECTION=true
 ENV PORT=3000
