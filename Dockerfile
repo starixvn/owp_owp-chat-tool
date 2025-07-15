@@ -1,13 +1,88 @@
-# Use the official Rocket.Chat image from the registry
-FROM hub.nexdev.net/base/rocketchat:7.4.0
+FROM node:22-bookworm-slim
 
-# Copy the environment file to the container
-ARG TRANSFORM_CONFIG
-ENV ENV_FILE_SUFFIX=${TRANSFORM_CONFIG:+.${TRANSFORM_CONFIG}}
-COPY .env$ENV_FILE_SUFFIX .env
+ENV DENO_VERSION=1.43.5
 
-# Expose the Rocket.Chat port 3000
+RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
+  && case "${dpkgArch##*-}" in \
+  amd64) ARCH='x86_64';; \
+  arm64) ARCH='aarch64';; \
+  *) echo "unsupported Deno architecture"; exit 1 ;; \
+  esac \
+  && set -ex \
+  && apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip && rm -rf /var/lib/apt/lists/* \
+  && curl -fsSL https://dl.deno.land/release/v${DENO_VERSION}/deno-${ARCH}-unknown-linux-gnu.zip --output /tmp/deno-${ARCH}-unknown-linux-gnu.zip \
+  && echo "246bf818932c5e11adb85afaaf3c90e65d5cbe14bcaa8ea14d35fc085869775d /tmp/deno-x86_64-unknown-linux-gnu.zip" | sha256sum -c - \
+  && unzip /tmp/deno-${ARCH}-unknown-linux-gnu.zip -d /tmp \
+  && rm /tmp/deno-${ARCH}-unknown-linux-gnu.zip \
+  && chmod 755 /tmp/deno \
+  && mv /tmp/deno /usr/local/bin/deno \
+  && apt-mark auto '.*' > /dev/null \
+  && find /usr/local -type f -executable -exec ldd '{}' ';' \
+  | awk '/=>/ { print $(NF-1) }' \
+  | sort -u \
+  | xargs -r dpkg-query --search \
+  | cut -d: -f1 \
+  | sort -u \
+  | xargs -r apt-mark manual \
+  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false
+
+RUN groupadd -r rocketchat \
+  && useradd -r -g rocketchat rocketchat \
+  && mkdir -p /app/uploads \
+  && chown rocketchat:rocketchat /app/uploads
+
+VOLUME /app/uploads
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+ENV RC_VERSION=7.4.0
+
+RUN set -eux \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends fontconfig \
+  && aptMark="$(apt-mark showmanual)" \
+  && apt-get install -y --no-install-recommends g++ make python3 ca-certificates curl gnupg \
+  && rm -rf /var/lib/apt/lists/* \
+  # gpg: key 4FD08104: public key "Rocket.Chat Buildmaster <buildmaster@rocket.chat>" imported
+  && gpg --batch --keyserver keyserver.ubuntu.com --recv-keys 0E163286C20D07B9787EBE9FD7F9D0414FD08104 \
+  && curl -fSL "https://releases.rocket.chat/${RC_VERSION}/download" -o rocket.chat.tgz \
+  && curl -fSL "https://releases.rocket.chat/${RC_VERSION}/asc" -o rocket.chat.tgz.asc \
+  && gpg --batch --verify rocket.chat.tgz.asc rocket.chat.tgz \
+  && tar zxf rocket.chat.tgz \
+  && rm rocket.chat.tgz rocket.chat.tgz.asc \
+  && cd bundle/programs/server \
+  && npm install --unsafe-perm=true \
+  && apt-mark auto '.*' > /dev/null \
+  && apt-mark manual $aptMark > /dev/null \
+  && find /usr/local -type f -executable -exec ldd '{}' ';' \
+  | awk '/=>/ { print $(NF-1) }' \
+  | sort -u \
+  | xargs -r dpkg-query --search \
+  | cut -d: -f1 \
+  | sort -u \
+  | xargs -r apt-mark manual \
+  && apt-mark manual curl \
+  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+  && npm cache clear --force \
+  && chown -R rocketchat:rocketchat /app
+
+USER rocketchat
+
+WORKDIR /app/bundle
+
+# needs a mongoinstance - defaults to container linking with alias 'db'
+ENV DEPLOY_METHOD=docker-official
+ENV MONGO_URL=mongodb://rkc_owp:WOmpYqsEkRz8wCj4UehPVM3v5cfSNaLt@10.142.34.20:16601,10.142.34.20:16602,10.142.34.18:16602/rocketchat?replicaSet=rocketchat_rs&authSource=admin
+ENV MAIL_URL=smtp://fakeuser:fakepass@localhost:2525/
+ENV EXIT_UNHANDLEDPROMISEREJECTION=true
+ENV PORT=3000
+ENV ROOT_URL=http://localhost:3000 
+ENV HTTP_PROXY="http://iusqd.gamora.prod:8801"
+ENV HTTPS_PROXY="http://iusqd.gamora.prod:8801"
+ENV NO_PROXY="127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+
 EXPOSE 3000
 
-# Start the Rocket.Chat server using the environments from file
-CMD ["/bin/sh", "-c", "export $(xargs < .env) && node main.js"]
+CMD ["node", "main.js"]
