@@ -79,4 +79,5 @@ COPY .env$ENV_FILE_SUFFIX .env
 
 EXPOSE 3000
 
-CMD ["node", "main.js"]
+# Start the Rocket.Chat server using the environments from file
+CMD ["/bin/sh", "-c", "export $(xargs < .env) && node main.js"]
