@@ -72,17 +72,12 @@ USER rocketchat
 
 WORKDIR /app/bundle
 
-# needs a mongoinstance - defaults to container linking with alias 'db'
-ENV DEPLOY_METHOD=docker-official
-ENV MONGO_URL=mongodb://rkc_owp:WOmpYqsEkRz8wCj4UehPVM3v5cfSNaLt@10.142.34.20:16601,10.142.34.20:16602,10.142.34.18:16602/rocketchat?replicaSet=rocketchat_rs&authSource=admin
-ENV MAIL_URL=smtp://fakeuser:fakepass@localhost:2525/
-ENV EXIT_UNHANDLEDPROMISEREJECTION=true
-ENV PORT=3000
-ENV ROOT_URL=http://localhost:3000 
-ENV HTTP_PROXY="http://iusqd.gamora.prod:8801"
-ENV HTTPS_PROXY="http://iusqd.gamora.prod:8801"
-ENV NO_PROXY="127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+# Copy the environment file to the container
+ARG TRANSFORM_CONFIG
+ENV ENV_FILE_SUFFIX=${TRANSFORM_CONFIG:+.${TRANSFORM_CONFIG}}
+COPY .env$ENV_FILE_SUFFIX .env
 
 EXPOSE 3000
 
-CMD ["node", "main.js"]
+# Start the Rocket.Chat server using the environments from file
+CMD ["/bin/sh", "-c", "export $(xargs < .env) && node main.js"]
