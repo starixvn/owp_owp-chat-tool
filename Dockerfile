@@ -1,5 +1,5 @@
 # Use the official Rocket.Chat image from the registry
-FROM hub.nexdev.net/base/rocketchat:7.4.0
+FROM hub.nexdev.net/base/rocketchat:7.9.3
 
 # Copy the environment file to the container
 ARG TRANSFORM_CONFIG
