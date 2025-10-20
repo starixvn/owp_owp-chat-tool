@@ -8,6 +8,7 @@ COPY .env$ENV_FILE_SUFFIX .env
 
 # Set Node.js heap size to 4GB
 ENV NODE_OPTIONS=--max-old-space-size=4096
+ENV MAIL_URL=smtp://disabled
 
 # Expose the Rocket.Chat port 3000
 EXPOSE 3000
